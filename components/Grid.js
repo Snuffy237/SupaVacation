@@ -1,12 +1,42 @@
 import PropTypes from 'prop-types';
 import Card from '@/components/Card';
 import { ExclamationIcon } from '@heroicons/react/outline';
+import {useEffect, useState} from "react";
+import axios from "axios";
 
 const Grid = ({ homes = [] }) => {
+
+  const [favorites, setFavorites] = useState([]);
+
   const isEmpty = homes.length === 0;
 
+  useEffect( () => {
+    (async () => {
+      //Retrieve all favorite home for user
+      try {
+        const favoriteHome = await axios.get(`/api/user/favorites`);
+        setFavorites(favoriteHome.data)
+      } catch (e) {
+        console.log("error", e);
+        setFavorites([])
+      }
+    })();
+  }, [])
+
   const toggleFavorite = async id => {
-    // TODO: Add/remove home from the authenticated user's favorites
+    //Add/remove home from the authenticated user's favorites
+    let returnFavorite;
+    const isFav = favorites.find(fav => fav.id === id)
+
+    if (isFav) {
+      returnFavorite = await axios.delete(`/api/homes/${id}/favorite`);
+      const newFav = favorites.filter(fav => fav.id !== returnFavorite.data.id)
+      setFavorites(newFav);
+    } else {
+      returnFavorite = await axios.put(`/api/homes/${id}/favorite`);
+      setFavorites([...favorites, returnFavorite.data]);
+    }
+
   };
 
   return isEmpty ? (
@@ -17,7 +47,12 @@ const Grid = ({ homes = [] }) => {
   ) : (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {homes.map(home => (
-        <Card key={home.id} {...home} onClickFavorite={toggleFavorite} />
+        <Card
+            key={home.id}
+            {...home}
+            onClickFavorite={toggleFavorite}
+            favorite={(favorites.find(fav => fav.id === home.id))}
+        />
       ))}
     </div>
   );
